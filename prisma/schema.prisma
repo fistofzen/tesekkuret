@@ -28,7 +28,12 @@ model User {
   comments        Comment[]
   followCompanies FollowCompany[]
   reports         Report[]
-
+ 
+  bio      String?
+  phone    String?
+  location String?
+  website  String?
+ 
   @@map("users")
 }
 

@@ -209,7 +209,7 @@ export default async function Home() {
   ]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">
       {/* Hero Section */}
       <HomeHero />
 
@@ -227,9 +227,12 @@ export default async function Home() {
 
       {/* Ana Feed */}
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <h2 className="mb-6 text-2xl font-bold text-gray-900">
-          Tüm Teşekkürler
-        </h2>
+        <div className="mb-6 flex items-center gap-3">
+          <div className="h-1 w-12 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full"></div>
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-purple-900 to-pink-900 bg-clip-text text-transparent">
+            Tüm Teşekkürler
+          </h2>
+        </div>
         <HomePageFeed />
       </div>
     </div>
