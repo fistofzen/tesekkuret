@@ -1,65 +1,240 @@
-import Image from "next/image";
+import { HomeHero } from '@/components/home/home-hero';
+import TrendingThanks from '@/components/home/trending-thanks';
+import { PopularThanks } from '@/components/home/popular-thanks';
+import { SuccessStories } from '@/components/home/success-stories';
+import { StatsSection } from '@/components/home/stats-section';
+import { HomePageFeed } from '@/components/home/home-page-feed';
+import { prisma } from '@/lib/prisma';
 
-export default function Home() {
+async function getTrendingThanks() {
+  try {
+    const thanks = await prisma.thanks.findMany({
+      take: 10,
+      orderBy: [
+        { likes: { _count: 'desc' } },
+        { comments: { _count: 'desc' } },
+      ],
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        },
+        company: {
+          select: {
+            slug: true,
+            name: true,
+            logoUrl: true,
+            category: true,
+          },
+        },
+        _count: {
+          select: {
+            likes: true,
+            comments: true,
+          },
+        },
+      },
+    });
+
+    // Mock data if empty (for demo purposes)
+    if (thanks.length === 0) {
+      return [
+        {
+          id: '1',
+          title: 'Fuzul Evde Temizlik Hatası Ve Ödeme Artışı Mağduriyeti',
+          content: 'Fuzul Evde Temizlik Hatası Ve Ödeme Artışı Mağduriyeti',
+          thumbnail: '/banner1.jpeg',
+          createdAt: new Date(),
+          likes: 25,
+          commentCount: 379,
+          user: { id: '1', name: 'Asiye', image: 'https://i.pravatar.cc/150?img=1' },
+          company: { id: 'fuzul-ev', name: 'Fuzul Ev', logo: null },
+        },
+        {
+          id: '2',
+          title: 'Eminevim Kura Çekimlerinde Haksızlık Ve Mağduriyet',
+          content: 'Eminevim Kura Çekimlerinde Haksızlık Ve Mağduriyet',
+          thumbnail: null,
+          createdAt: new Date(),
+          likes: 41,
+          commentCount: 852,
+          user: { id: '2', name: 'Niyazi', image: 'https://i.pravatar.cc/150?img=2' },
+          company: { id: 'eminotomotiv', name: 'EminOtomotiv', logo: null },
+        },
+        {
+          id: '3',
+          title: 'Papara Hesabımdaki Bakiyemi Çekemiyorum, Sürekli Günlük Limit Hatası Alıyorum',
+          content: 'Papara Hesabımdaki Bakiyemi Çekemiyorum, Sürekli Günlük Limit Hatası Alıyorum',
+          thumbnail: null,
+          createdAt: new Date(),
+          likes: 2,
+          commentCount: 266,
+          user: { id: '3', name: 'Vafa', image: 'https://i.pravatar.cc/150?img=3' },
+          company: { id: 'papara', name: 'Papara', logo: null },
+        },
+        {
+          id: '4',
+          title: 'Sıfır Kilometre Araçta Yaygın Paslanma Ve Boya Kabarması Sorunu',
+          content: 'Sıfır Kilometre Araçta Yaygın Paslanma Ve Boya Kabarması Sorunu',
+          thumbnail: '/banner1.jpeg',
+          createdAt: new Date(),
+          likes: 11,
+          commentCount: 283,
+          user: { id: '4', name: 'Muhammed', image: 'https://i.pravatar.cc/150?img=4' },
+          company: { id: 'chery', name: 'Chery', logo: null },
+        },
+        {
+          id: '5',
+          title: 'Yetkili Serviste Yapılan Bakım Hatası Sonrası Aracım Garanti Dışı Bırakıldı',
+          content: 'Yetkili Serviste Yapılan Bakım Hatası Sonrası Aracım Garanti Dışı Bırakıldı',
+          thumbnail: '/banner1.jpeg',
+          createdAt: new Date(),
+          likes: 2,
+          commentCount: 228,
+          user: { id: '5', name: 'Muhammed', image: 'https://i.pravatar.cc/150?img=5' },
+          company: { id: 'akgun-otomotiv', name: 'Akgün Otomotiv (Sakarya)', logo: null },
+        },
+      ];
+    }
+
+    // Map database data to component format
+    return thanks.map((t: typeof thanks[0]) => ({
+      id: t.id,
+      title: t.text,
+      content: t.text,
+      thumbnail: t.mediaUrl,
+      createdAt: t.createdAt,
+      likes: t._count.likes,
+      commentCount: t._count.comments,
+      user: t.user,
+      company: t.company ? {
+        id: t.company.slug,
+        name: t.company.name,
+        logo: t.company.logoUrl,
+      } : undefined,
+    }));
+  } catch (error) {
+    console.error('Error fetching trending thanks:', error);
+    // Return mock data on error
+    return [
+      {
+        id: '1',
+        title: 'Fuzul Evde Temizlik Hatası Ve Ödeme Artışı Mağduriyeti',
+        content: 'Fuzul Evde Temizlik Hatası Ve Ödeme Artışı Mağduriyeti',
+        thumbnail: '/banner1.jpeg',
+        createdAt: new Date(),
+        likes: 25,
+        commentCount: 379,
+        user: { id: '1', name: 'Asiye', image: 'https://i.pravatar.cc/150?img=1' },
+        company: { id: 'fuzul-ev', name: 'Fuzul Ev', logo: null },
+      },
+      {
+        id: '2',
+        title: 'Eminevim Kura Çekimlerinde Haksızlık Ve Mağduriyet',
+        content: 'Eminevim Kura Çekimlerinde Haksızlık Ve Mağduriyet',
+        thumbnail: null,
+        createdAt: new Date(),
+        likes: 41,
+        commentCount: 852,
+        user: { id: '2', name: 'Niyazi', image: 'https://i.pravatar.cc/150?img=2' },
+        company: { id: 'eminotomotiv', name: 'EminOtomotiv', logo: null },
+      },
+      {
+        id: '3',
+        title: 'Papara Hesabımdaki Bakiyemi Çekemiyorum',
+        content: 'Papara Hesabımdaki Bakiyemi Çekemiyorum',
+        thumbnail: null,
+        createdAt: new Date(),
+        likes: 2,
+        commentCount: 266,
+        user: { id: '3', name: 'Vafa', image: 'https://i.pravatar.cc/150?img=3' },
+        company: { id: 'papara', name: 'Papara', logo: null },
+      },
+    ];
+  }
+}
+
+async function getPopularThanks() {
+  try {
+    const thanks = await prisma.thanks.findMany({
+      take: 5,
+      orderBy: [{ likes: { _count: 'desc' } }],
+      where: {
+        createdAt: {
+          gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Son 30 gün
+        },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        },
+        company: {
+          select: {
+            id: true,
+            slug: true,
+            name: true,
+            logoUrl: true,
+          },
+        },
+        _count: {
+          select: {
+            likes: true,
+            comments: true,
+          },
+        },
+      },
+    });
+
+    return thanks.map((t: typeof thanks[0]) => ({
+      ...t,
+      createdAt: t.createdAt.toISOString(),
+    }));
+  } catch (error) {
+    console.error('Error fetching popular thanks:', error);
+    return [];
+  }
+}
+
+export default async function Home() {
+  const [trending, popular] = await Promise.all([
+    getTrendingThanks(),
+    getPopularThanks(),
+  ]);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="min-h-screen bg-gray-50">
+      {/* Hero Section */}
+      <HomeHero />
+
+      {/* Gündemdeki Teşekkürler */}
+      <TrendingThanks thanks={trending} />
+
+      {/* Çok Konuşulanlar */}
+      {popular.length > 0 && <PopularThanks items={popular} />}
+
+      {/* Çok Konuşulanlar - Kayan Kartlar */}
+      <SuccessStories />
+
+      {/* İstatistikler - Çözüm Başarısı */}
+      <StatsSection />
+
+      {/* Ana Feed */}
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <h2 className="mb-6 text-2xl font-bold text-gray-900">
+          Tüm Teşekkürler
+        </h2>
+        <HomePageFeed />
+      </div>
     </div>
   );
 }
+
+
+

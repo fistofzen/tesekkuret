@@ -1,0 +1,184 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?   // For credentials login
+  isAdmin       Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+
+  accounts        Account[]
+  sessions        Session[]
+  thanks          Thanks[]
+  likes           Like[]
+  comments        Comment[]
+  followCompanies FollowCompany[]
+  reports         Report[]
+
+  @@map("users")
+}
+
+// NextAuth models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// Company model
+model Company {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  logoUrl   String?
+  category  String
+  createdAt DateTime @default(now())
+
+  thanks    Thanks[]
+  followers FollowCompany[]
+
+  @@index([name, category])
+  @@map("companies")
+}
+
+// Thanks model
+model Thanks {
+  id         String   @id @default(cuid())
+  userId     String
+  companyId  String
+  text       String   // min 10, max 1000 chars (validated in app)
+  mediaUrl   String?
+  mediaType  MediaType?
+  likeCount  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  likes    Like[]
+  comments Comment[]
+  reports  Report[]
+
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId])
+  @@map("thanks")
+}
+
+// Like model
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  thanksId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  thanks Thanks @relation(fields: [thanksId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, thanksId])
+  @@map("likes")
+}
+
+// Comment model
+model Comment {
+  id        String   @id @default(cuid())
+  userId    String
+  thanksId  String
+  text      String   // max 500 chars (validated in app)
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  thanks Thanks @relation(fields: [thanksId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+// FollowCompany model
+model FollowCompany {
+  id        String   @id @default(cuid())
+  userId    String
+  companyId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@map("follow_companies")
+}
+
+// Report model
+model Report {
+  id        String       @id @default(cuid())
+  userId    String
+  thanksId  String
+  reason    String
+  status    ReportStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  thanks Thanks @relation(fields: [thanksId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, thanksId])
+  @@map("reports")
+}
+
+// Enum for media type
+enum MediaType {
+  image
+  video
+}
+
+// Enum for report status
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  REJECTED
+  RESOLVED
+}
