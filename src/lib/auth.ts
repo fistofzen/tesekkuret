@@ -58,9 +58,75 @@ export const authOptions: NextAuthOptions = {
     signIn: '/auth/signin',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ user, account, profile }) {
+      // Allow credentials provider to sign in normally
+      if (account?.provider === 'credentials') {
+        return true;
+      }
+
+      // For OAuth providers (Google), check if user with this email exists
+      if (account?.provider === 'google' && user.email) {
+        const existingUser = await prisma.user.findUnique({
+          where: { email: user.email },
+        });
+
+        // If user exists, link the Google account
+        if (existingUser) {
+          // Check if account is already linked
+          const existingAccount = await prisma.account.findFirst({
+            where: {
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+            },
+          });
+
+          // If not linked, create the link
+          if (!existingAccount) {
+            await prisma.account.create({
+              data: {
+                userId: existingUser.id,
+                type: account.type,
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+                access_token: account.access_token,
+                expires_at: account.expires_at,
+                token_type: account.token_type,
+                scope: account.scope,
+                id_token: account.id_token,
+              },
+            });
+          }
+
+          // Update user info from Google if available
+          if (profile) {
+            const googleProfile = profile as { name?: string; picture?: string };
+            if (googleProfile.name || googleProfile.picture) {
+              await prisma.user.update({
+                where: { id: existingUser.id },
+                data: {
+                  name: googleProfile.name || existingUser.name,
+                  image: googleProfile.picture || existingUser.image,
+                },
+              });
+            }
+          }
+        }
+      }
+
+      return true;
+    },
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
+      }
+      // For OAuth, get user id from database
+      if (account?.provider === 'google' && token.email) {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: token.email },
+        });
+        if (dbUser) {
+          token.id = dbUser.id;
+        }
       }
       return token;
     },
