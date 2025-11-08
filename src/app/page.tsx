@@ -4,6 +4,7 @@ import { PopularThanks } from '@/components/home/popular-thanks';
 import { SuccessStories } from '@/components/home/success-stories';
 import { StatsSection } from '@/components/home/stats-section';
 import { TopCompaniesList } from '@/components/top/top-companies-list';
+import { Footer } from '@/components/layout/footer';
 import { prisma } from '@/lib/prisma';
 
 async function getTrendingThanks() {
@@ -303,6 +304,9 @@ export default async function Home() {
         </div>
         <TopCompaniesList companies={topCompanies} />
       </div>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }
