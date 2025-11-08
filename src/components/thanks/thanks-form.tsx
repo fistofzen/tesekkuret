@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Image from 'next/image';
+import Image from '@/components/ui/image';
 import { z } from 'zod';
 import toast, { Toaster } from 'react-hot-toast';
-import { MagnifyingGlassIcon, PhotoIcon, VideoCameraIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 const thanksSchema = z.object({
   companyId: z.string().min(1, 'Şirket seçmelisiniz'),
@@ -100,24 +100,11 @@ export function ThanksForm() {
     setUploadProgress(0);
 
     try {
-      const mediaType = file.type.startsWith('image/') ? 'image' : 'video';
+      // Create form data
+      const formData = new FormData();
+      formData.append('file', file);
 
-      // Get presigned URL
-      const { createPresignedUrl } = await import('@/app/actions/upload');
-      const result = await createPresignedUrl({
-        type: mediaType,
-        contentType: file.type,
-        fileSize: file.size,
-      });
-
-      if (!result.success || !result.url || !result.publicUrl) {
-        throw new Error(result.error || 'URL oluşturulamadı');
-      }
-
-      const presignedUrl = result.url;
-      const publicUrl = result.publicUrl;
-
-      // Upload to S3 with progress
+      // Upload via API route with progress tracking
       const xhr = new XMLHttpRequest();
 
       xhr.upload.addEventListener('progress', (event) => {
@@ -127,31 +114,46 @@ export function ThanksForm() {
         }
       });
 
-      await new Promise<void>((resolve, reject) => {
+      const uploadPromise = new Promise<{ success: boolean; publicUrl?: string; mediaType?: 'image' | 'video'; error?: string }>((resolve, reject) => {
         xhr.addEventListener('load', () => {
           if (xhr.status >= 200 && xhr.status < 300) {
-            resolve();
+            try {
+              const response = JSON.parse(xhr.responseText);
+              resolve(response);
+            } catch {
+              reject(new Error('Invalid response'));
+            }
           } else {
-            reject(new Error(`Upload failed with status ${xhr.status}`));
+            try {
+              const error = JSON.parse(xhr.responseText);
+              reject(new Error(error.error || 'Upload failed'));
+            } catch {
+              reject(new Error(`Upload failed with status ${xhr.status}`));
+            }
           }
         });
 
         xhr.addEventListener('error', () => {
-          reject(new Error('Upload failed'));
+          reject(new Error('Network error'));
         });
 
-        xhr.open('PUT', presignedUrl);
-        xhr.setRequestHeader('Content-Type', file.type);
-        xhr.send(file);
+        xhr.open('POST', '/api/upload');
+        xhr.send(formData);
       });
+
+      const result = await uploadPromise;
+
+      if (!result.success || !result.publicUrl) {
+        throw new Error(result.error || 'Upload failed');
+      }
 
       setFormData((prev) => ({
         ...prev,
-        mediaUrl: publicUrl,
-        mediaType,
+        mediaUrl: result.publicUrl,
+        mediaType: result.mediaType,
       }));
 
-      toast.success('Dosya yüklendi!');
+      toast.success('Dosya yüklendi! ✓');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Dosya yüklenemedi';
       toast.error(message);
@@ -219,20 +221,32 @@ export function ThanksForm() {
   const charCount = formData.text.length;
   const charLimit = 1000;
   const charRemaining = charLimit - charCount;
+  const charPercentage = (charCount / charLimit) * 100;
+
+  // Quick emoji suggestions
+  const quickEmojis = ['😊', '👍', '❤️', '🎉', '✨', '🙏', '💯', '🔥'];
+  
+  const insertEmoji = (emoji: string) => {
+    setFormData((prev) => ({ ...prev, text: prev.text + emoji }));
+  };
 
   return (
     <>
       <Toaster position="top-right" />
-      <form onSubmit={handleSubmit} className="mx-auto max-w-2xl space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-8">
         {/* Company Select */}
-        <div>
-          <label htmlFor="company" className="block text-sm font-semibold text-gray-900">
-            Şirket <span className="text-red-600">*</span>
+        <div className="group">
+          <label htmlFor="company" className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-3">
+            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-lg">
+              🏢
+            </span>
+            Hangi şirkete teşekkür ediyorsun?
+            <span className="text-red-500">*</span>
           </label>
-          <div className="relative mt-2">
+          <div className="relative">
             <div className="relative">
               <MagnifyingGlassIcon
-                className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+                className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-purple-400"
                 aria-hidden="true"
               />
               <input
@@ -247,173 +261,329 @@ export function ThanksForm() {
                   }
                 }}
                 onFocus={() => setShowCompanyDropdown(true)}
-                placeholder="Şirket ara..."
-                className={`block w-full rounded-xl border py-3 pl-11 pr-4 shadow-sm transition-colors focus:outline-none focus:ring-2 ${
+                placeholder="Şirket adını aramaya başla..."
+                className={`block w-full rounded-2xl border-2 py-4 pl-11 pr-4 text-lg shadow-lg transition-all focus:outline-none focus:ring-4 ${
                   errors.companyId
-                    ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                    : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                    ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
+                    : 'border-purple-200 focus:border-purple-500 focus:ring-purple-200 hover:border-purple-300'
                 }`}
               />
+              {selectedCompany && (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-green-100 to-emerald-100 rounded-full border border-green-300">
+                  <span className="text-green-700 font-semibold text-sm">✓ Seçildi</span>
+                </div>
+              )}
             </div>
 
             {/* Dropdown */}
             {showCompanyDropdown && companyQuery.length >= 2 && (
-              <div className="absolute z-10 mt-2 w-full rounded-xl border border-gray-200 bg-white shadow-lg">
+              <div className="absolute z-10 mt-3 w-full rounded-2xl border-2 border-purple-200 bg-white shadow-2xl overflow-hidden">
                 {isLoadingCompanies ? (
-                  <div className="p-4 text-center text-sm text-gray-600">Aranıyor...</div>
+                  <div className="p-6 text-center">
+                    <div className="inline-block w-6 h-6 border-3 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="mt-2 text-sm text-gray-600">Aranıyor...</p>
+                  </div>
                 ) : companyResults.length > 0 ? (
-                  <ul className="max-h-60 overflow-auto py-2">
+                  <ul className="max-h-64 overflow-auto divide-y divide-gray-100">
                     {companyResults.map((company) => (
                       <li key={company.id}>
                         <button
                           type="button"
                           onClick={() => handleCompanySelect(company)}
-                          className="flex w-full items-center gap-3 px-4 py-2 text-left hover:bg-gray-50"
+                          className="flex w-full items-center gap-4 px-5 py-4 text-left hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all group"
                         >
-                          {company.logoUrl && (
-                            <Image
-                              src={company.logoUrl}
-                              alt={company.name}
-                              width={32}
-                              height={32}
-                              className="rounded object-contain"
-                            />
-                          )}
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">{company.name}</div>
-                            <div className="text-xs text-gray-600">{company.category}</div>
+                          <div className="flex-shrink-0 w-12 h-12 rounded-xl overflow-hidden bg-gray-100 border-2 border-gray-200 group-hover:border-purple-300 transition-colors">
+                            {company.logoUrl ? (
+                              <Image
+                                src={company.logoUrl}
+                                alt={company.name}
+                                width={48}
+                                height={48}
+                                className="w-full h-full object-contain p-1"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-2xl">
+                                🏢
+                              </div>
+                            )}
                           </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-gray-900 group-hover:text-purple-700 transition-colors">
+                              {company.name}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              {company.category}
+                            </div>
+                          </div>
+                          <span className="text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity">→</span>
                         </button>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <div className="p-4 text-center text-sm text-gray-600">Şirket bulunamadı</div>
+                  <div className="p-6 text-center">
+                    <div className="text-4xl mb-2">🔍</div>
+                    <p className="text-sm text-gray-600">Şirket bulunamadı</p>
+                  </div>
                 )}
               </div>
             )}
           </div>
-          {errors.companyId && <p className="mt-1 text-sm text-red-600">{errors.companyId}</p>}
+          {errors.companyId && (
+            <div className="mt-2 flex items-center gap-2 text-red-600">
+              <span className="text-lg">⚠️</span>
+              <p className="text-sm font-medium">{errors.companyId}</p>
+            </div>
+          )}
         </div>
 
         {/* Text Area */}
-        <div>
-          <label htmlFor="text" className="block text-sm font-semibold text-gray-900">
-            Teşekkür Metniniz <span className="text-red-600">*</span>
+        <div className="group">
+          <label htmlFor="text" className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-3">
+            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-pink-500 to-orange-500 text-white text-lg">
+              ✍️
+            </span>
+            Teşekkür mesajın nedir?
+            <span className="text-red-500">*</span>
           </label>
-          <div className="mt-2">
+          
+          {/* Quick Emoji Bar */}
+          <div className="flex items-center gap-2 mb-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+            <span className="text-xs font-semibold text-gray-600">Hızlı Emojiler:</span>
+            <div className="flex gap-1">
+              {quickEmojis.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => insertEmoji(emoji)}
+                  className="w-8 h-8 flex items-center justify-center hover:bg-white rounded-lg transition-all hover:scale-110"
+                  title={`${emoji} ekle`}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative">
             <textarea
               id="text"
-              rows={6}
+              rows={8}
               value={formData.text}
               onChange={(e) => {
                 setFormData((prev) => ({ ...prev, text: e.target.value }));
                 setErrors((prev) => ({ ...prev, text: '' }));
               }}
-              placeholder="İyi deneyiminizi paylaşın..."
-              className={`block w-full rounded-xl border px-4 py-3 shadow-sm transition-colors focus:outline-none focus:ring-2 ${
+              placeholder="Örnek: Bu şirketle yaşadığım müthiş deneyimi paylaşmak istiyorum! Müşteri hizmetleri çok ilgili ve ürün kalitesi harikaydı. Kesinlikle tavsiye ederim! 😊"
+              className={`block w-full rounded-2xl border-2 px-5 py-4 text-lg shadow-lg transition-all focus:outline-none focus:ring-4 resize-none ${
                 errors.text
-                  ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                  : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                  ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
+                  : 'border-pink-200 focus:border-pink-500 focus:ring-pink-200 hover:border-pink-300'
               }`}
             />
+            
+            {/* Character Counter with Progress Circle */}
+            <div className="absolute bottom-4 right-4 flex items-center gap-3">
+              <div className="relative w-12 h-12">
+                <svg className="w-12 h-12 transform -rotate-90">
+                  <circle
+                    cx="24"
+                    cy="24"
+                    r="20"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    fill="none"
+                    className="text-gray-200"
+                  />
+                  <circle
+                    cx="24"
+                    cy="24"
+                    r="20"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    fill="none"
+                    strokeDasharray={`${2 * Math.PI * 20}`}
+                    strokeDashoffset={2 * Math.PI * 20 * (1 - charPercentage / 100)}
+                    className={`transition-all duration-300 ${
+                      charRemaining < 0
+                        ? 'text-red-500'
+                        : charRemaining < 100
+                          ? 'text-yellow-500'
+                          : 'text-green-500'
+                    }`}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span
+                    className={`text-xs font-bold ${
+                      charRemaining < 0
+                        ? 'text-red-600'
+                        : charRemaining < 100
+                          ? 'text-yellow-600'
+                          : 'text-green-600'
+                    }`}
+                  >
+                    {charRemaining < 0 ? charRemaining : charCount}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="mt-1 flex items-center justify-between">
-            <div>{errors.text && <p className="text-sm text-red-600">{errors.text}</p>}</div>
-            <p
-              className={`text-sm ${
-                charRemaining < 0
-                  ? 'font-semibold text-red-600'
-                  : charRemaining < 100
-                    ? 'text-yellow-600'
-                    : 'text-gray-600'
-              }`}
-            >
-              {charCount} / {charLimit}
+          
+          <div className="mt-2 flex items-center justify-between">
+            <div>
+              {errors.text && (
+                <div className="flex items-center gap-2 text-red-600">
+                  <span className="text-lg">⚠️</span>
+                  <p className="text-sm font-medium">{errors.text}</p>
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-gray-500">
+              {charCount < 10 && 'En az 10 karakter gerekli'}
+              {charCount >= 10 && charRemaining >= 0 && `${charRemaining} karakter kaldı`}
+              {charRemaining < 0 && `${Math.abs(charRemaining)} karakter fazla!`}
             </p>
           </div>
         </div>
 
         {/* Media Upload */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-900">Medya (Opsiyonel)</label>
-          <div className="mt-2">
+        <div className="group">
+          <label className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-3">
+            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-lg">
+              📸
+            </span>
+            Görsel veya Video Ekle (Opsiyonel)
+          </label>
+          
+          <div className="space-y-4">
             {formData.mediaUrl ? (
-              <div className="relative overflow-hidden rounded-xl border border-gray-300">
-                {formData.mediaType === 'image' ? (
-                  <div className="relative aspect-video w-full">
-                    <Image src={formData.mediaUrl} alt="Yüklenen görsel" fill className="object-contain" />
-                  </div>
-                ) : (
-                  <div className="flex aspect-video items-center justify-center bg-gray-100">
-                    <VideoCameraIcon className="h-16 w-16 text-gray-400" aria-hidden="true" />
-                  </div>
-                )}
+              <div className="relative overflow-hidden rounded-2xl border-2 border-blue-200 shadow-xl">
+                <div className="relative aspect-video w-full bg-gradient-to-br from-blue-50 to-cyan-50">
+                  {/* Use unoptimized to avoid Next.js trying to fetch from R2 endpoint */}
+                  <Image 
+                    src={formData.mediaUrl} 
+                    alt="Yüklenen medya" 
+                    fill 
+                    className="object-contain p-4"
+                    unoptimized
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={handleRemoveMedia}
-                  className="absolute right-2 top-2 rounded-full bg-red-600 p-2 text-white shadow-lg hover:bg-red-700"
+                  className="absolute right-3 top-3 rounded-full bg-red-500 p-2.5 text-white shadow-2xl hover:bg-red-600 transition-all hover:scale-110"
                 >
                   <XMarkIcon className="h-5 w-5" aria-hidden="true" />
                 </button>
+                <div className="absolute bottom-3 left-3 px-4 py-2 bg-white/90 backdrop-blur-sm rounded-full text-sm font-semibold text-gray-700 shadow-lg">
+                  ✓ Yüklendi
+                </div>
               </div>
             ) : (
-              <div>
-                <input
-                  type="file"
-                  id="media"
-                  accept="image/jpeg,image/png,image/webp,video/mp4"
-                  onChange={handleFileChange}
-                  disabled={isUploading}
-                  className="hidden"
-                />
-                <label
-                  htmlFor="media"
-                  className={`flex cursor-pointer items-center justify-center gap-3 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 px-6 py-8 transition-colors hover:border-blue-500 hover:bg-blue-50 ${
-                    isUploading ? 'cursor-not-allowed opacity-50' : ''
-                  }`}
-                >
-                  <PhotoIcon className="h-8 w-8 text-gray-400" aria-hidden="true" />
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-gray-900">
-                      {isUploading ? 'Yükleniyor...' : 'Görsel veya Video Ekle'}
-                    </p>
-                    <p className="mt-1 text-xs text-gray-600">JPEG, PNG, WEBP (max 5MB) veya MP4 (max 50MB)</p>
-                  </div>
-                </label>
-
-                {/* Progress Bar */}
-                {isUploading && (
-                  <div className="mt-3">
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                      <div
-                        className="h-full bg-blue-600 transition-all duration-300"
-                        style={{ width: `${uploadProgress}%` }}
-                      />
+              <>
+                {/* File Upload Area */}
+                <div>
+                  <input
+                    type="file"
+                    id="media"
+                    accept="image/jpeg,image/png,image/webp,video/mp4"
+                    onChange={handleFileChange}
+                    disabled={isUploading}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="media"
+                    className={`group relative flex cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border-3 border-dashed bg-gradient-to-br from-blue-50 to-cyan-50 px-6 py-12 transition-all hover:from-blue-100 hover:to-cyan-100 ${
+                      isUploading 
+                        ? 'cursor-not-allowed opacity-50 border-gray-300' 
+                        : 'border-blue-300 hover:border-blue-500 hover:shadow-xl'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="text-5xl">📁</div>
                     </div>
-                    <p className="mt-1 text-center text-xs text-gray-600">{uploadProgress}%</p>
+                    <div className="text-center">
+                      <p className="text-lg font-bold text-gray-900">
+                        {isUploading ? '⏳ Yükleniyor...' : '🖼️ Dosya Seç veya Sürükle Bırak'}
+                      </p>
+                      <p className="mt-2 text-sm text-gray-600">
+                        JPEG, PNG, WEBP (max 5MB) • MP4 (max 50MB)
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* Progress Bar */}
+                  {isUploading && (
+                    <div className="mt-4 space-y-2">
+                      <div className="h-3 w-full overflow-hidden rounded-full bg-gray-200 shadow-inner">
+                        <div
+                          className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-300 shadow-lg relative"
+                          style={{ width: `${uploadProgress}%` }}
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse"></div>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-semibold text-blue-600">Yükleniyor...</span>
+                        <span className="font-bold text-gray-900">{uploadProgress}%</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Divider */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200"></div>
                   </div>
-                )}
-              </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-4 bg-white text-gray-500 font-medium">veya URL ile ekle</span>
+                  </div>
+                </div>
+
+                {/* URL Input */}
+                <input
+                  type="url"
+                  placeholder="https://example.com/image.jpg"
+                  value={formData.mediaUrl || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, mediaUrl: e.target.value }))}
+                  disabled={isUploading}
+                  className="block w-full rounded-2xl border-2 border-blue-200 px-5 py-4 text-base shadow-lg focus:border-blue-400 focus:ring-4 focus:ring-blue-100 transition-all outline-none hover:border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </>
             )}
           </div>
         </div>
 
         {/* Submit Button */}
-        <div className="flex items-center justify-end gap-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-4 pt-6 border-t-2 border-gray-100">
           <button
             type="button"
             onClick={() => router.back()}
-            className="rounded-xl border border-gray-300 px-6 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            className="rounded-2xl border-2 border-gray-300 px-8 py-4 text-base font-bold text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all hover:shadow-lg"
           >
-            İptal
+            ← Geri Dön
           </button>
           <button
             type="submit"
             disabled={isSubmitting || isUploading}
-            className="rounded-xl bg-gradient-to-r from-yellow-400 to-orange-500 px-8 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:shadow-xl hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+            className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 px-10 py-4 text-base font-bold text-white shadow-2xl transition-all hover:shadow-pink-500/50 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 group"
           >
-            {isSubmitting ? 'Gönderiliyor...' : '💙 Teşekkürünü Paylaş'}
+            <span className="relative z-10 flex items-center justify-center gap-2">
+              {isSubmitting ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Gönderiliyor...</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-2xl">💙</span>
+                  <span>Teşekkürünü Paylaş</span>
+                </>
+              )}
+            </span>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
           </button>
         </div>
       </form>

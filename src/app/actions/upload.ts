@@ -110,9 +110,9 @@ export async function createPresignedUrl(
       expiresIn: 300, // 5 minutes
     });
 
-    // Construct public URL (assuming CDN or public bucket)
-    // Adjust this based on your S3/CDN configuration
-    const publicUrl = `${process.env.S3_ENDPOINT}/${S3_BUCKET}/${key}`;
+    // Construct public URL using S3_PUBLIC_URL env variable
+    const publicBaseUrl = process.env.S3_PUBLIC_URL || `${process.env.S3_ENDPOINT}/${S3_BUCKET}`;
+    const publicUrl = `${publicBaseUrl}/${key}`;
 
     return {
       success: true,

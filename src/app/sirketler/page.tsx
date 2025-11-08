@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import Image from 'next/image';
+import Image from '@/components/ui/image';
 import Link from 'next/link';
 import { 
   TrendingUp, 
@@ -128,6 +128,7 @@ export default async function SirketlerPage() {
                         fill
                         className="object-contain p-1"
                         sizes="48px"
+                        unoptimized
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 to-pink-100">

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
-import Image from 'next/image';
+import Image from '@/components/ui/image';
 import Link from 'next/link';
 import { 
   User, 

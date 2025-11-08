@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import Image from '@/components/ui/image';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';

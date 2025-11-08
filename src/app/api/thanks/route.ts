@@ -129,7 +129,7 @@ export async function GET(req: Request) {
 const createThanksSchema = z.object({
   companyId: z.string().cuid('Geçersiz şirket ID'),
   text: thanksTextSchema,
-  mediaUrl: z.string().url('Geçerli bir URL giriniz').optional(),
+  mediaUrl: z.string().url('Geçerli bir URL giriniz').nullable().optional().or(z.literal('')),
   mediaType: z.enum(['image', 'video']).optional(),
 });
 
@@ -171,8 +171,11 @@ export async function POST(req: Request) {
     const body = await req.json();
     const data = createThanksSchema.parse(body);
 
+    // Normalize empty string to null
+    const mediaUrl = data.mediaUrl && data.mediaUrl.trim() !== '' ? data.mediaUrl : null;
+
     // Validate mediaUrl and mediaType together
-    if ((data.mediaUrl && !data.mediaType) || (!data.mediaUrl && data.mediaType)) {
+    if ((mediaUrl && !data.mediaType) || (!mediaUrl && data.mediaType)) {
       return NextResponse.json(
         { error: 'mediaUrl ve mediaType birlikte sağlanmalıdır' },
         { status: 400 }
@@ -197,7 +200,7 @@ export async function POST(req: Request) {
         userId: session.user.id,
         companyId: data.companyId,
         text: data.text,
-        mediaUrl: data.mediaUrl || null,
+        mediaUrl: mediaUrl,
         mediaType: data.mediaType || null,
       },
       include: {

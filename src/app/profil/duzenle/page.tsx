@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/hooks/use-user';
-import Image from 'next/image';
+import Image from '@/components/ui/image';
 import { Camera, Save, Loader2 } from 'lucide-react';
 
 export default function ProfilDuzenlePage() {

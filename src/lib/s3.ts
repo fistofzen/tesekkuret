@@ -24,7 +24,7 @@ export const s3Client = new S3Client({
     secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
   },
   // For Cloudflare R2 or other S3-compatible services
-  forcePathStyle: true,
+  forcePathStyle: true, // R2 requires path-style
 });
 
 export const S3_BUCKET = process.env.S3_BUCKET;

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
-import Image from 'next/image';
+import Image from '@/components/ui/image';
 import AuthModal from '@/components/auth/auth-modal';
 import { useUser } from '@/hooks/use-user';
 

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
-import Image from 'next/image';
+import Image from '@/components/ui/image';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
