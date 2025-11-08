@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useUser } from '@/hooks/use-user';
 import Link from 'next/link';
 import AuthModal from '@/components/auth/auth-modal';
@@ -10,6 +10,11 @@ export function Header() {
   const { user, isAuthenticated, isLoading } = useUser();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<'login' | 'register'>('login');
+
+  // Debug: Log auth state
+  useEffect(() => {
+    console.log('Header Auth State:', { user, isAuthenticated, isLoading });
+  }, [user, isAuthenticated, isLoading]);
 
   return (
     <header className="border-b border-purple-200/50 bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50">

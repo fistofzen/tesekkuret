@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 import AuthModal from '@/components/auth/auth-modal';
+import { useUser } from '@/hooks/use-user';
 
 export function HomeHero() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const router = useRouter();
+  const { isAuthenticated, isLoading } = useUser();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,12 +80,14 @@ export function HomeHero() {
               >
                 Şirketleri Keşfet
               </button>
-              <button
-                onClick={() => setIsAuthModalOpen(true)}
-                className="rounded-full border-2 border-gray-300 bg-white px-8 py-3 font-semibold text-gray-700 transition hover:border-gray-400 hover:bg-gray-50"
-              >
-                Giriş Yap / Üye Ol
-              </button>
+              {!isAuthenticated && !isLoading && (
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="rounded-full border-2 border-gray-300 bg-white px-8 py-3 font-semibold text-gray-700 transition hover:border-gray-400 hover:bg-gray-50"
+                >
+                  Giriş Yap / Üye Ol
+                </button>
+              )}
             </div>
           </div>
 
