@@ -2,10 +2,9 @@
 
 import { useState } from 'react';
 import { useUser } from '@/hooks/use-user';
-import { signOut } from 'next-auth/react';
 import Link from 'next/link';
-import Image from 'next/image';
 import AuthModal from '@/components/auth/auth-modal';
+import UserMenu from '@/components/user-menu';
 
 export function Header() {
   const { user, isAuthenticated, isLoading } = useUser();
@@ -42,30 +41,7 @@ export function Header() {
                 </Link>
                 
                 {/* User Menu */}
-                <div className="flex items-center space-x-3">
-                  {user.image ? (
-                    <Image
-                      src={user.image}
-                      alt={user.name || 'User'}
-                      width={32}
-                      height={32}
-                      className="rounded-full"
-                    />
-                  ) : (
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white">
-                      {user.name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
-                    </div>
-                  )}
-                  <span className="text-sm font-medium text-gray-700">
-                    {user.name || user.email}
-                  </span>
-                  <button
-                    onClick={() => signOut({ callbackUrl: '/' })}
-                    className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
-                  >
-                    Çıkış Yap
-                  </button>
-                </div>
+                <UserMenu user={user} />
               </div>
             ) : (
               <div className="flex items-center space-x-3">
