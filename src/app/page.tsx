@@ -3,7 +3,7 @@ import TrendingThanks from '@/components/home/trending-thanks';
 import { PopularThanks } from '@/components/home/popular-thanks';
 import { SuccessStories } from '@/components/home/success-stories';
 import { StatsSection } from '@/components/home/stats-section';
-import { HomePageFeed } from '@/components/home/home-page-feed';
+import { TopCompaniesList } from '@/components/top/top-companies-list';
 import { prisma } from '@/lib/prisma';
 
 async function getTrendingThanks() {
@@ -202,10 +202,75 @@ async function getPopularThanks() {
   }
 }
 
+async function getTopCompanies() {
+  try {
+    const companies = await prisma.company.findMany({
+      take: 10,
+      orderBy: [
+        { thanks: { _count: 'desc' } },
+      ],
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        logoUrl: true,
+        category: true,
+        _count: {
+          select: {
+            thanks: true,
+          },
+        },
+        thanks: {
+          take: 1,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            createdAt: true,
+            _count: {
+              select: {
+                likes: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Calculate total likes for each company
+    const companiesWithStats = await Promise.all(
+      companies.map(async (company: typeof companies[0]) => {
+        const totalLikes = await prisma.like.count({
+          where: {
+            thanks: {
+              companyId: company.id,
+            },
+          },
+        });
+
+        return {
+          id: company.id,
+          name: company.name,
+          slug: company.slug,
+          logoUrl: company.logoUrl,
+          category: company.category,
+          thanksCount: company._count.thanks,
+          totalLikeCount: totalLikes,
+          lastThanksDate: company.thanks[0]?.createdAt.toISOString() || null,
+        };
+      })
+    );
+
+    return companiesWithStats;
+  } catch (error) {
+    console.error('Error fetching top companies:', error);
+    return [];
+  }
+}
+
 export default async function Home() {
-  const [trending, popular] = await Promise.all([
+  const [trending, popular, topCompanies] = await Promise.all([
     getTrendingThanks(),
     getPopularThanks(),
+    getTopCompanies(),
   ]);
 
   return (
@@ -219,21 +284,24 @@ export default async function Home() {
       {/* Çok Konuşulanlar */}
       {popular.length > 0 && <PopularThanks items={popular} />}
 
-      {/* Çok Konuşulanlar - Kayan Kartlar */}
-      <SuccessStories />
-
+ 
       {/* İstatistikler - Çözüm Başarısı */}
       <StatsSection />
 
-      {/* Ana Feed */}
+      {/* En Çok Teşekkür Alan Şirketler */}
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="mb-6 flex items-center gap-3">
-          <div className="h-1 w-12 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full"></div>
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-purple-900 to-pink-900 bg-clip-text text-transparent">
-            Tüm Teşekkürler
-          </h2>
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="h-1 w-12 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full"></div>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-purple-900 to-pink-900 bg-clip-text text-transparent">
+              En Çok Teşekkür Alan Şirketler
+            </h2>
+          </div>
+          <p className="text-gray-600 ml-16">
+            Müşteri memnuniyetinde öne çıkan markalar
+          </p>
         </div>
-        <HomePageFeed />
+        <TopCompaniesList companies={topCompanies} />
       </div>
     </div>
   );
