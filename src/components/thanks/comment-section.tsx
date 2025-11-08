@@ -8,7 +8,7 @@ import { Send, MessageCircle } from 'lucide-react';
 
 interface Comment {
   id: string;
-  content: string;
+  text: string;
   createdAt: Date;
   user: {
     id: string;
@@ -77,7 +77,7 @@ export default function CommentSection({ thanksId }: CommentSectionProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content: newComment }),
+        body: JSON.stringify({ text: newComment }),
       });
 
       if (!response.ok) {
@@ -85,7 +85,7 @@ export default function CommentSection({ thanksId }: CommentSectionProps) {
       }
 
       const data = await response.json();
-      setComments([data.comment, ...comments]);
+      setComments([data, ...comments]);
       setNewComment('');
       toast.success('Yorum eklendi! 💬');
     } catch (error) {
@@ -196,7 +196,7 @@ export default function CommentSection({ thanksId }: CommentSectionProps) {
                       </time>
                     </div>
                     <p className="text-gray-700 leading-relaxed">
-                      {comment.content}
+                      {comment.text}
                     </p>
                   </div>
                 </div>

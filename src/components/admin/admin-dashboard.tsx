@@ -141,7 +141,7 @@ export function AdminDashboard({ stats, reports }: AdminDashboardProps) {
                       </p>
                     </div>
                     <Link
-                      href={`/tesekkurler/${report.thanks.id}`}
+                      href={`/tesekkur/${report.thanks.id}`}
                       className="text-sm font-medium text-blue-600 hover:text-blue-700"
                     >
                       İncele →

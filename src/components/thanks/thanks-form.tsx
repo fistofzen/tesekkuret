@@ -206,10 +206,10 @@ export function ThanksForm() {
 
       const newThanks = await res.json();
 
-      toast.success('Teşekkürünüz başarıyla gönderildi!');
-
-      // Redirect to the thanks detail page
-      router.push(`/tesekkurler/${newThanks.id}`);
+      toast.success('Teşekkürünüz başarıyla oluşturuldu! 🎉');
+      
+      // Redirect to the new thanks page
+      router.push(`/tesekkur/${newThanks.id}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Bir hata oluştu';
       toast.error(message);

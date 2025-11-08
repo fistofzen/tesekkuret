@@ -76,7 +76,7 @@ export function SearchPage() {
 
       if (thanksRes.ok) {
         const thanksData = await thanksRes.json();
-        setThanks(thanksData.items || []);
+        setThanks(thanksData.thanks || []);
       }
     } catch (error) {
       console.error('Search error:', error);

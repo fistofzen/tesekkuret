@@ -124,7 +124,7 @@ export function ThanksCard({ thanks, isLiked = false, onLike }: ThanksCardProps)
 
       {/* Media */}
       {thanks.mediaUrl && (
-        <Link href={`/tesekkurler/${thanks.id}`} className="block">
+        <Link href={`/tesekkur/${thanks.id}`} className="block">
           {thanks.mediaType === 'image' ? (
             <div className="relative aspect-video w-full overflow-hidden bg-gray-100">
               <Image
@@ -149,7 +149,7 @@ export function ThanksCard({ thanks, isLiked = false, onLike }: ThanksCardProps)
 
       {/* Content */}
       <div className="p-4 pt-3">
-        <Link href={`/tesekkurler/${thanks.id}`} className="block">
+        <Link href={`/tesekkur/${thanks.id}`} className="block">
           <p className="text-sm leading-relaxed text-gray-800 line-clamp-3">{displayText}</p>
         </Link>
 
@@ -170,7 +170,7 @@ export function ThanksCard({ thanks, isLiked = false, onLike }: ThanksCardProps)
           </button>
 
           <Link
-            href={`/tesekkurler/${thanks.id}#comments`}
+            href={`/tesekkur/${thanks.id}#comments`}
             className="flex items-center gap-1.5 text-sm font-medium text-gray-600 transition-colors hover:text-blue-600"
             aria-label="Yorumlar"
           >

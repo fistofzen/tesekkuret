@@ -7,9 +7,9 @@ import LikeButton from '@/components/thanks/like-button';
 import CommentSection from '@/components/thanks/comment-section';
 
 interface PageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 async function getThanks(id: string) {
@@ -29,7 +29,7 @@ async function getThanks(id: string) {
             id: true,
             name: true,
             slug: true,
-            logo: true,
+            logoUrl: true,
           },
         },
         _count: {
@@ -49,7 +49,8 @@ async function getThanks(id: string) {
 }
 
 export default async function ThanksDetailPage({ params }: PageProps) {
-  const thanks = await getThanks(params.id);
+  const { id } = await params;
+  const thanks = await getThanks(id);
 
   if (!thanks) {
     notFound();
@@ -151,7 +152,7 @@ export default async function ThanksDetailPage({ params }: PageProps) {
             {/* Text Content */}
             <div className="prose prose-lg max-w-none">
               <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                {thanks.content}
+                {thanks.text}
               </p>
             </div>
 

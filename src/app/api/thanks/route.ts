@@ -11,6 +11,7 @@ const listThanksSchema = z.object({
   mode: z.enum(['latest', 'popular']).default('latest'),
   companySlug: z.string().optional(),
   media: z.enum(['image', 'video']).optional(),
+  q: z.string().optional(), // Search query
   take: z.coerce.number().int().positive().max(50).default(20),
   cursor: z.string().optional(), // Format: createdAt_id
 });
@@ -22,11 +23,12 @@ export async function GET(req: Request) {
       mode: searchParams.get('mode') || 'latest',
       companySlug: searchParams.get('companySlug') || undefined,
       media: searchParams.get('media') || undefined,
+      q: searchParams.get('q') || undefined,
       take: searchParams.get('take') || '20',
       cursor: searchParams.get('cursor') || undefined,
     });
 
-    const { mode, companySlug, media, take, cursor } = params;
+    const { mode, companySlug, media, q, take, cursor } = params;
 
     // Build where clause
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,6 +40,15 @@ export async function GET(req: Request) {
 
     if (media) {
       where.mediaType = media;
+    }
+
+    // Search in text, company name, or user name
+    if (q && q.trim()) {
+      where.OR = [
+        { text: { contains: q, mode: 'insensitive' } },
+        { company: { name: { contains: q, mode: 'insensitive' } } },
+        { user: { name: { contains: q, mode: 'insensitive' } } },
+      ];
     }
 
     // Parse cursor
