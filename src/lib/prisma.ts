@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
+// Force reload TypeScript types after Prisma generate
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };

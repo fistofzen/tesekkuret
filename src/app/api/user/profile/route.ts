@@ -73,8 +73,34 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    // Check if userId query parameter is provided
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get('userId');
+
+    if (userId) {
+      // Public profile view - fetch specific user
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          name: true,
+          image: true,
+        },
+      });
+
+      if (!user) {
+        return NextResponse.json(
+          { error: 'Kullanıcı bulunamadı' },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({ user });
+    }
+
+    // No userId - return current user's profile
     const session = await getServerSession(authOptions);
 
     if (!session || !session.user?.id) {

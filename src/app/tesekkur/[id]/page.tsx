@@ -32,6 +32,13 @@ async function getThanks(id: string) {
             logoUrl: true,
           },
         },
+        targetUser: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        },
         _count: {
           select: {
             likes: true,
@@ -63,56 +70,83 @@ export default async function ThanksDetailPage({ params }: PageProps) {
         <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border-2 border-purple-100 overflow-hidden mb-6">
           {/* User Info */}
           <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-purple-50/50 to-pink-50/50">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Link href={`/kullanici/${thanks.user.id}`} className="relative w-14 h-14 rounded-full overflow-hidden ring-4 ring-purple-100 hover:ring-purple-200 transition-all">
-                  <Image
-                    src={thanks.user.image || 'https://i.pravatar.cc/150?img=1'}
-                    alt={thanks.user.name || 'Kullanıcı'}
-                    fill
-                    className="object-cover"
-                    sizes="56px"
-                  />
-                </Link>
-                <div>
-                  <Link href={`/kullanici/${thanks.user.id}`} className="text-lg font-bold text-gray-900 hover:text-purple-600 transition-colors">
-                    {thanks.user.name || 'Anonim Kullanıcı'}
-                  </Link>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Calendar className="w-4 h-4" />
-                    <time dateTime={thanks.createdAt.toISOString()}>
-                      {new Date(thanks.createdAt).toLocaleDateString('tr-TR', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
-                    </time>
-                  </div>
-                </div>
-              </div>
+            {/* Date */}
+            <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+              <Calendar className="w-4 h-4" />
+              <time dateTime={thanks.createdAt.toISOString()}>
+                {new Date(thanks.createdAt).toLocaleDateString('tr-TR', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </time>
+            </div>
 
-              {thanks.company && (
-                <Link
-                  href={`/sirket/${thanks.company.slug}`}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-pink-100 to-purple-100 rounded-full hover:from-pink-200 hover:to-purple-200 transition-all border-2 border-pink-200"
-                >
-                  {thanks.company.logoUrl && (
-                    <div className="relative w-6 h-6">
-                      <Image
-                        src={thanks.company.logoUrl}
-                        alt={thanks.company.name}
-                        fill
-                        className="object-contain"
-                        sizes="24px"
-                      />
-                    </div>
-                  )}
-                  <Building2 className="w-5 h-5 text-purple-600" />
-                  <span className="font-semibold text-purple-700">
-                    {thanks.company.name}
+            {/* Thanker and Thankee */}
+            <div className="flex items-center gap-6 flex-wrap">
+              {/* Teşekkür Eden (Thanker) */}
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-gray-500">Teşekkür Eden:</span>
+                <Link href={`/kullanici/${thanks.user.id}`} className="flex items-center gap-3 group">
+                  <div className="relative w-12 h-12 rounded-full overflow-hidden ring-4 ring-purple-100 group-hover:ring-purple-200 transition-all">
+                    <Image
+                      src={thanks.user.image || 'https://i.pravatar.cc/150?img=1'}
+                      alt={thanks.user.name || 'Kullanıcı'}
+                      fill
+                      className="object-cover"
+                      sizes="48px"
+                    />
+                  </div>
+                  <span className="font-bold text-gray-900 group-hover:text-purple-600 transition-colors">
+                    {thanks.user.name || 'Anonim Kullanıcı'}
                   </span>
                 </Link>
-              )}
+              </div>
+
+              {/* Arrow */}
+              <div className="text-2xl text-purple-400">→</div>
+
+              {/* Teşekkür Edilen (Thankee) */}
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-gray-500">Teşekkür Edilen:</span>
+                {thanks.targetUser ? (
+                  <Link href={`/kullanici/${thanks.targetUser.id}`} className="flex items-center gap-3 group">
+                    <div className="relative w-12 h-12 rounded-full overflow-hidden ring-4 ring-pink-100 group-hover:ring-pink-200 transition-all">
+                      <Image
+                        src={thanks.targetUser.image || 'https://i.pravatar.cc/150?img=2'}
+                        alt={thanks.targetUser.name || 'Kullanıcı'}
+                        fill
+                        className="object-cover"
+                        sizes="48px"
+                      />
+                    </div>
+                    <span className="font-bold text-gray-900 group-hover:text-pink-600 transition-colors">
+                      {thanks.targetUser.name || 'Anonim Kullanıcı'}
+                    </span>
+                  </Link>
+                ) : thanks.company ? (
+                  <Link
+                    href={`/sirket/${thanks.company.slug}`}
+                    className="flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-pink-100 to-purple-100 rounded-full hover:from-pink-200 hover:to-purple-200 transition-all border-2 border-pink-200"
+                  >
+                    {thanks.company.logoUrl && (
+                      <div className="relative w-6 h-6">
+                        <Image
+                          src={thanks.company.logoUrl}
+                          alt={thanks.company.name}
+                          fill
+                          className="object-contain"
+                          sizes="24px"
+                        />
+                      </div>
+                    )}
+                    <Building2 className="w-5 h-5 text-purple-600" />
+                    <span className="font-semibold text-purple-700">
+                      {thanks.company.name}
+                    </span>
+                  </Link>
+                ) : null}
+              </div>
             </div>
           </div>
 

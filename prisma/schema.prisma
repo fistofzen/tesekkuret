@@ -23,8 +23,8 @@ model User {
 
   accounts        Account[]
   sessions        Session[]
-  thanks          Thanks[]
-  thanksReceived  Thanks[]  @relation("UserThanks") // Thanks received from others
+  thanks          Thanks[]         @relation("UserCreatedThanks") // Thanks created by user
+  thanksReceived  Thanks[]         @relation("UserReceivedThanks") // Thanks received from others
   likes           Like[]
   comments        Comment[]
   followCompanies FollowCompany[]
@@ -119,11 +119,12 @@ model Thanks {
   mediaUrl        String?
   mediaType       MediaType?
   likeCount       Int        @default(0)
+  isApproved      Boolean    @default(false) // false = pending approval, true = approved
   createdAt       DateTime   @default(now())
 
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User       @relation("UserCreatedThanks", fields: [userId], references: [id], onDelete: Cascade)
   company     Company?   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  targetUser  User?      @relation("UserThanks", fields: [targetUserId], references: [id], onDelete: Cascade)
+  targetUser  User?      @relation("UserReceivedThanks", fields: [targetUserId], references: [id], onDelete: Cascade)
   likes       Like[]
   comments    Comment[]
   reports     Report[]
@@ -132,6 +133,7 @@ model Thanks {
   @@index([targetUserId, createdAt(sort: Desc)])
   @@index([companyId])
   @@index([targetUserId])
+  @@index([isApproved])
   @@map("thanks")
 }
 

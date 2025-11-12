@@ -25,10 +25,17 @@ interface Company {
   category: string;
 }
 
+interface User {
+  id: string;
+  name: string | null;
+  image: string | null;
+}
+
 export function ThanksForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const companySlug = searchParams.get('sirket');
+  const targetUserId = searchParams.get('kullanici');
   const { data: session, status } = useSession();
 
   const [formData, setFormData] = useState<ThanksFormData>({
@@ -38,6 +45,7 @@ export function ThanksForm() {
   });
 
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [companyQuery, setCompanyQuery] = useState('');
   const [companyResults, setCompanyResults] = useState<Company[]>([]);
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
@@ -47,6 +55,20 @@ export function ThanksForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Load user from URL parameter
+  useEffect(() => {
+    if (targetUserId) {
+      fetch(`/api/user/profile?userId=${targetUserId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.user) {
+            setSelectedUser(data.user);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [targetUserId]);
 
   // Load company from URL parameter
   useEffect(() => {
@@ -196,19 +218,14 @@ export function ThanksForm() {
       return;
     }
 
-    // Validate with Zod
-    const result = thanksSchema.safeParse(formData);
+    // Manual validation for user or company
+    if (!selectedUser && !formData.companyId) {
+      setErrors({ companyId: 'Bir şirket veya kullanıcı seçmelisiniz' });
+      return;
+    }
 
-    if (!result.success) {
-      console.log('❌ Validation failed:', result.error);
-      const fieldErrors: Record<string, string> = {};
-      result.error.issues.forEach((issue) => {
-        const path = issue.path[0]?.toString();
-        if (path) {
-          fieldErrors[path] = issue.message;
-        }
-      });
-      setErrors(fieldErrors);
+    if (!formData.text || formData.text.length < 10) {
+      setErrors({ text: 'En az 10 karakter girmelisiniz' });
       return;
     }
 
@@ -216,10 +233,18 @@ export function ThanksForm() {
     setIsSubmitting(true);
 
     try {
+      // Prepare request body with optional targetUserId
+      const requestBody = {
+        text: formData.text,
+        ...(formData.mediaUrl && { mediaUrl: formData.mediaUrl }),
+        ...(formData.mediaType && { mediaType: formData.mediaType }),
+        ...(selectedUser ? { targetUserId: selectedUser.id } : { companyId: formData.companyId }),
+      };
+
       const res = await fetch('/api/thanks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(result.data),
+        body: JSON.stringify(requestBody),
       });
 
       if (!res.ok) {
@@ -231,8 +256,12 @@ export function ThanksForm() {
 
       toast.success('Teşekkürünüz başarıyla oluşturuldu! 🎉');
       
-      // Redirect to the new thanks page
-      router.push(`/tesekkur/${newThanks.id}`);
+      // Redirect to user profile if thanking a user, otherwise to thanks page
+      if (selectedUser) {
+        router.push(`/kullanici/${selectedUser.id}`);
+      } else {
+        router.push(`/tesekkur/${newThanks.id}`);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Bir hata oluştu';
       toast.error(message);
@@ -285,106 +314,149 @@ export function ThanksForm() {
       )}
       
       <form onSubmit={handleSubmit} className="space-y-8 relative isolate">
-        {/* Company Select */}
+        {/* Company/User Select */}
         <div className="group relative z-0">
-          <label htmlFor="company" className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-3">
-            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-lg">
-              🏢
-            </span>
-            Hangi şirkete teşekkür ediyorsun?
-            <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <div className="relative">
-              <MagnifyingGlassIcon
-                className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-purple-400"
-                aria-hidden="true"
-              />
-              <input
-                type="text"
-                id="company"
-                value={companyQuery}
-                onChange={(e) => {
-                  setCompanyQuery(e.target.value);
-                  if (selectedCompany) {
-                    setSelectedCompany(null);
-                    setFormData((prev) => ({ ...prev, companyId: '' }));
-                  }
-                }}
-                onFocus={() => setShowCompanyDropdown(true)}
-                placeholder="Şirket adını aramaya başla..."
-                className={`block w-full rounded-2xl border-2 py-4 pl-11 pr-4 text-lg shadow-lg transition-all focus:outline-none focus:ring-4 ${
-                  errors.companyId
-                    ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
-                    : 'border-purple-200 focus:border-purple-500 focus:ring-purple-200 hover:border-purple-300'
-                }`}
-              />
-              {selectedCompany && (
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-green-100 to-emerald-100 rounded-full border border-green-300">
-                  <span className="text-green-700 font-semibold text-sm">✓ Seçildi</span>
+          {selectedUser ? (
+            // Show selected user (read-only)
+            <>
+              <label className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-3">
+                <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-lg">
+                  👤
+                </span>
+                Kime teşekkür ediyorsun?
+              </label>
+              <div className="flex items-center gap-4 p-5 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl border-2 border-purple-200">
+                <div className="flex-shrink-0 w-14 h-14 rounded-full overflow-hidden bg-gray-100 border-2 border-purple-300">
+                  {selectedUser.image ? (
+                    <Image
+                      src={selectedUser.image}
+                      alt={selectedUser.name || 'Kullanıcı'}
+                      width={56}
+                      height={56}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-3xl">
+                      👤
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-
-            {/* Dropdown */}
-            {showCompanyDropdown && companyQuery.length >= 2 && (
-              <div className="absolute z-10 mt-3 w-full rounded-2xl border-2 border-purple-200 bg-white shadow-2xl overflow-hidden">
-                {isLoadingCompanies ? (
-                  <div className="p-6 text-center">
-                    <div className="inline-block w-6 h-6 border-3 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                    <p className="mt-2 text-sm text-gray-600">Aranıyor...</p>
+                <div className="flex-1">
+                  <div className="font-bold text-gray-900 text-lg">
+                    {selectedUser.name || 'İsimsiz Kullanıcı'}
                   </div>
-                ) : companyResults.length > 0 ? (
-                  <ul className="max-h-64 overflow-auto divide-y divide-gray-100">
-                    {companyResults.map((company) => (
-                      <li key={company.id}>
-                        <button
-                          type="button"
-                          onClick={() => handleCompanySelect(company)}
-                          className="flex w-full items-center gap-4 px-5 py-4 text-left hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all group"
-                        >
-                          <div className="flex-shrink-0 w-12 h-12 rounded-xl overflow-hidden bg-gray-100 border-2 border-gray-200 group-hover:border-purple-300 transition-colors">
-                            {company.logoUrl ? (
-                              <Image
-                                src={company.logoUrl}
-                                alt={company.name}
-                                width={48}
-                                height={48}
-                                className="w-full h-full object-contain p-1"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-2xl">
-                                🏢
+                  <div className="text-sm text-purple-600">
+                    Bu kişiye teşekkür edeceksiniz
+                  </div>
+                </div>
+                <div className="px-4 py-2 bg-green-500 text-white rounded-full font-bold text-sm">
+                  ✓ Seçildi
+                </div>
+              </div>
+            </>
+          ) : (
+            // Show company selector
+            <>
+              <label htmlFor="company" className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-3">
+                <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-lg">
+                  🏢
+                </span>
+                Hangi şirkete teşekkür ediyorsun?
+                <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <div className="relative">
+                  <MagnifyingGlassIcon
+                    className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-purple-400"
+                    aria-hidden="true"
+                  />
+                  <input
+                    type="text"
+                    id="company"
+                    value={companyQuery}
+                    onChange={(e) => {
+                      setCompanyQuery(e.target.value);
+                      if (selectedCompany) {
+                        setSelectedCompany(null);
+                        setFormData((prev) => ({ ...prev, companyId: '' }));
+                      }
+                    }}
+                    onFocus={() => setShowCompanyDropdown(true)}
+                    placeholder="Şirket adını aramaya başla..."
+                    className={`block w-full rounded-2xl border-2 py-4 pl-11 pr-4 text-lg shadow-lg transition-all focus:outline-none focus:ring-4 ${
+                      errors.companyId
+                        ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
+                        : 'border-purple-200 focus:border-purple-500 focus:ring-purple-200 hover:border-purple-300'
+                    }`}
+                  />
+                  {selectedCompany && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-green-100 to-emerald-100 rounded-full border border-green-300">
+                      <span className="text-green-700 font-semibold text-sm">✓ Seçildi</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Dropdown */}
+                {showCompanyDropdown && companyQuery.length >= 2 && (
+                  <div className="absolute z-10 mt-3 w-full rounded-2xl border-2 border-purple-200 bg-white shadow-2xl overflow-hidden">
+                    {isLoadingCompanies ? (
+                      <div className="p-6 text-center">
+                        <div className="inline-block w-6 h-6 border-3 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                        <p className="mt-2 text-sm text-gray-600">Aranıyor...</p>
+                      </div>
+                    ) : companyResults.length > 0 ? (
+                      <ul className="max-h-64 overflow-auto divide-y divide-gray-100">
+                        {companyResults.map((company) => (
+                          <li key={company.id}>
+                            <button
+                              type="button"
+                              onClick={() => handleCompanySelect(company)}
+                              className="flex w-full items-center gap-4 px-5 py-4 text-left hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all group"
+                            >
+                              <div className="flex-shrink-0 w-12 h-12 rounded-xl overflow-hidden bg-gray-100 border-2 border-gray-200 group-hover:border-purple-300 transition-colors">
+                                {company.logoUrl ? (
+                                  <Image
+                                    src={company.logoUrl}
+                                    alt={company.name}
+                                    width={48}
+                                    height={48}
+                                    className="w-full h-full object-contain p-1"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-2xl">
+                                    🏢
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-semibold text-gray-900 group-hover:text-purple-700 transition-colors">
-                              {company.name}
-                            </div>
-                            <div className="text-xs text-gray-500 mt-0.5">
-                              {company.category}
-                            </div>
-                          </div>
-                          <span className="text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity">→</span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="p-6 text-center">
-                    <div className="text-4xl mb-2">🔍</div>
-                    <p className="text-sm text-gray-600">Şirket bulunamadı</p>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-semibold text-gray-900 group-hover:text-purple-700 transition-colors">
+                                  {company.name}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-0.5">
+                                  {company.category}
+                                </div>
+                              </div>
+                              <span className="text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="p-6 text-center">
+                        <div className="text-4xl mb-2">🔍</div>
+                        <p className="text-sm text-gray-600">Şirket bulunamadı</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
-          </div>
-          {errors.companyId && (
-            <div className="mt-2 flex items-center gap-2 text-red-600">
-              <span className="text-lg">⚠️</span>
-              <p className="text-sm font-medium">{errors.companyId}</p>
-            </div>
+              {errors.companyId && (
+                <div className="mt-2 flex items-center gap-2 text-red-600">
+                  <span className="text-lg">⚠️</span>
+                  <p className="text-sm font-medium">{errors.companyId}</p>
+                </div>
+              )}
+            </>
           )}
         </div>
 

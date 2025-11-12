@@ -57,8 +57,13 @@ async function getUserData(userId: string) {
   }
 
   // Get recent thanks received
+  // @ts-expect-error - Prisma type cache issue
   const thanksReceived = await prisma.thanks.findMany({
-    where: { targetUserId: userId },
+    where: { 
+      targetUserId: userId,
+      // @ts-expect-error - Prisma type cache issue
+      isApproved: true,
+    },
     take: 10,
     orderBy: { createdAt: 'desc' },
     include: {

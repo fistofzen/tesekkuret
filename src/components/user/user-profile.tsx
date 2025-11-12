@@ -104,6 +104,27 @@ export function UserProfile({ user }: UserProfileProps) {
     router.push(`/tesekkur-yaz?kullanici=${user.id}`);
   };
 
+  const handleDeleteThanks = async (thanksId: string) => {
+    if (!confirm('Bu teşekkürü silmek istediğinizden emin misiniz?')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/thanks/${thanksId}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        throw new Error('Teşekkür silinemedi');
+      }
+
+      toast.success('Teşekkür silindi');
+      router.refresh();
+    } catch (error) {
+      toast.error('Teşekkür silinirken bir hata oluştu');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Profile Header */}
@@ -222,49 +243,69 @@ export function UserProfile({ user }: UserProfileProps) {
           </div>
         ) : (
           <div className="grid gap-6">
-            {user.thanksReceived.map((thanks) => (
-              <div
-                key={thanks.id}
-                className="bg-white rounded-2xl p-6 shadow-lg border-2 border-gray-100 hover:border-purple-200 transition-all"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
-                    {thanks.user.image ? (
-                      <Image
-                        src={thanks.user.image}
-                        alt={thanks.user.name || 'User'}
-                        width={48}
-                        height={48}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-2xl">
-                        👤
+            {user.thanksReceived.map((thanks) => {
+              const isOwnThanks = session?.user?.id === thanks.user.id;
+              
+              return (
+                <div
+                  key={thanks.id}
+                  className="bg-white rounded-2xl p-6 shadow-lg border-2 border-gray-100 hover:border-purple-200 transition-all"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                      {thanks.user.image ? (
+                        <Image
+                          src={thanks.user.image}
+                          alt={thanks.user.name || 'User'}
+                          width={48}
+                          height={48}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-2xl">
+                          👤
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-bold text-gray-900">
+                          {thanks.user.name || 'İsimsiz'}
+                        </span>
+                        <span className="text-gray-500 text-sm">
+                          • {new Date(thanks.createdAt).toLocaleDateString('tr-TR')}
+                        </span>
+                      </div>
+                      <p className="text-gray-700 leading-relaxed">{thanks.text}</p>
+                      <div className="flex items-center gap-4 mt-4 text-sm text-gray-500">
+                        <span className="flex items-center gap-1">
+                          ❤️ {thanks._count.likes}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          💬 {thanks._count.comments}
+                        </span>
+                      </div>
+                    </div>
+                    {isOwnThanks && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => router.push(`/tesekkur/${thanks.id}/duzenle`)}
+                          className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+                        >
+                          ✏️ Düzenle
+                        </button>
+                        <button
+                          onClick={() => handleDeleteThanks(thanks.id)}
+                          className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
+                        >
+                          🗑️ Sil
+                        </button>
                       </div>
                     )}
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="font-bold text-gray-900">
-                        {thanks.user.name || 'İsimsiz'}
-                      </span>
-                      <span className="text-gray-500 text-sm">
-                        • {new Date(thanks.createdAt).toLocaleDateString('tr-TR')}
-                      </span>
-                    </div>
-                    <p className="text-gray-700 leading-relaxed">{thanks.text}</p>
-                    <div className="flex items-center gap-4 mt-4 text-sm text-gray-500">
-                      <span className="flex items-center gap-1">
-                        ❤️ {thanks._count.likes}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        💬 {thanks._count.comments}
-                      </span>
-                    </div>
-                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

@@ -138,10 +138,14 @@ export async function GET(req: Request) {
 
 // POST /api/thanks - Create new thanks post (auth required)
 const createThanksSchema = z.object({
-  companyId: z.string().cuid('Geçersiz şirket ID'),
+  companyId: z.string().cuid('Geçersiz şirket ID').optional(),
+  targetUserId: z.string().cuid('Geçersiz kullanıcı ID').optional(),
   text: thanksTextSchema,
   mediaUrl: z.union([z.string().url(), z.literal(''), z.null()]).optional(),
   mediaType: z.enum(['image', 'video']).optional().nullable(),
+}).refine((data) => data.companyId || data.targetUserId, {
+  message: 'Bir şirket veya kullanıcı seçmelisiniz',
+  path: ['companyId'],
 });
 
 export async function POST(req: Request) {
@@ -193,23 +197,48 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if company exists
-    const company = await prisma.company.findUnique({
-      where: { id: data.companyId },
-    });
+    // Check if company exists (if companyId provided)
+    if (data.companyId) {
+      const company = await prisma.company.findUnique({
+        where: { id: data.companyId },
+      });
 
-    if (!company) {
-      return NextResponse.json(
-        { error: 'Şirket bulunamadı' },
-        { status: 404 }
-      );
+      if (!company) {
+        return NextResponse.json(
+          { error: 'Şirket bulunamadı' },
+          { status: 404 }
+        );
+      }
+    }
+
+    // Check if target user exists (if targetUserId provided)
+    if (data.targetUserId) {
+      const targetUser = await prisma.user.findUnique({
+        where: { id: data.targetUserId },
+      });
+
+      if (!targetUser) {
+        return NextResponse.json(
+          { error: 'Kullanıcı bulunamadı' },
+          { status: 404 }
+        );
+      }
+
+      // Cannot thank yourself
+      if (data.targetUserId === session.user.id) {
+        return NextResponse.json(
+          { error: 'Kendinize teşekkür edemezsiniz' },
+          { status: 400 }
+        );
+      }
     }
 
     // Create thanks
     const thanks = await prisma.thanks.create({
       data: {
         userId: session.user.id,
-        companyId: data.companyId,
+        companyId: data.companyId || undefined,
+        targetUserId: data.targetUserId || undefined,
         text: data.text,
         mediaUrl: mediaUrl,
         mediaType: data.mediaType || null,
