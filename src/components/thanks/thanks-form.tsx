@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Image from '@/components/ui/image';
 import { z } from 'zod';
 import toast, { Toaster } from 'react-hot-toast';
@@ -10,7 +11,7 @@ import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 const thanksSchema = z.object({
   companyId: z.string().min(1, 'Şirket seçmelisiniz'),
   text: z.string().min(10, 'En az 10 karakter girmelisiniz').max(1000, 'En fazla 1000 karakter girebilirsiniz'),
-  mediaUrl: z.string().url().optional().or(z.literal('')),
+  mediaUrl: z.union([z.string().url(), z.literal('')]).optional(),
   mediaType: z.enum(['image', 'video']).optional(),
 });
 
@@ -28,6 +29,7 @@ export function ThanksForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const companySlug = searchParams.get('sirket');
+  const { data: session, status } = useSession();
 
   const [formData, setFormData] = useState<ThanksFormData>({
     companyId: '',
@@ -100,9 +102,9 @@ export function ThanksForm() {
     setUploadProgress(0);
 
     try {
-      // Create form data
-      const formData = new FormData();
-      formData.append('file', file);
+      // Create form data for upload
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
 
       // Upload via API route with progress tracking
       const xhr = new XMLHttpRequest();
@@ -138,7 +140,7 @@ export function ThanksForm() {
         });
 
         xhr.open('POST', '/api/upload');
-        xhr.send(formData);
+        xhr.send(uploadFormData);
       });
 
       const result = await uploadPromise;
@@ -147,17 +149,26 @@ export function ThanksForm() {
         throw new Error(result.error || 'Upload failed');
       }
 
-      setFormData((prev) => ({
-        ...prev,
-        mediaUrl: result.publicUrl,
-        mediaType: result.mediaType,
-      }));
+      console.log('📥 Upload result:', result);
+      
+      setFormData((prev) => {
+        const updated = {
+          ...prev,
+          mediaUrl: result.publicUrl || '',
+          mediaType: result.mediaType,
+        };
+        console.log('🔄 Updating formData:', updated);
+        return updated;
+      });
 
       toast.success('Dosya yüklendi! ✓');
+      console.log('✅ File uploaded successfully:', result.publicUrl);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Dosya yüklenemedi';
+      console.error('❌ Upload error:', error);
       toast.error(message);
     } finally {
+      console.log('🔄 Resetting upload state');
       setIsUploading(false);
       setUploadProgress(0);
     }
@@ -173,12 +184,23 @@ export function ThanksForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🔵 handleSubmit called!');
+    console.log('🔍 States:', { isSubmitting, isUploading, session: !!session });
     setErrors({});
+
+    // Check if user is logged in
+    if (!session) {
+      console.log('❌ No session - redirecting to login');
+      toast.error('Teşekkür yazabilmek için giriş yapmanız gerekiyor');
+      router.push('/giris?callbackUrl=/tesekkur-yaz');
+      return;
+    }
 
     // Validate with Zod
     const result = thanksSchema.safeParse(formData);
 
     if (!result.success) {
+      console.log('❌ Validation failed:', result.error);
       const fieldErrors: Record<string, string> = {};
       result.error.issues.forEach((issue) => {
         const path = issue.path[0]?.toString();
@@ -190,6 +212,7 @@ export function ThanksForm() {
       return;
     }
 
+    console.log('✅ Validation passed - submitting...');
     setIsSubmitting(true);
 
     try {
@@ -233,9 +256,37 @@ export function ThanksForm() {
   return (
     <>
       <Toaster position="top-right" />
-      <form onSubmit={handleSubmit} className="space-y-8">
+      
+      {/* Login Warning */}
+      {status === 'unauthenticated' && (
+        <div className="mb-6 flex items-start gap-3 rounded-2xl bg-yellow-50 border-2 border-yellow-300 p-4">
+          <span className="text-2xl">⚠️</span>
+          <div className="flex-1">
+            <h3 className="font-bold text-yellow-900 mb-1">Giriş Yapmanız Gerekiyor</h3>
+            <p className="text-sm text-yellow-800 mb-3">
+              Teşekkür yazabilmek için giriş yapmanız gerekmektedir.
+            </p>
+            <button
+              onClick={() => router.push('/giris?callbackUrl=/tesekkur-yaz')}
+              className="px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg hover:bg-yellow-600 transition-colors text-sm"
+            >
+              Giriş Yap
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* Loading State */}
+      {status === 'loading' && (
+        <div className="text-center py-8">
+          <div className="inline-block w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="mt-4 text-gray-600">Yükleniyor...</p>
+        </div>
+      )}
+      
+      <form onSubmit={handleSubmit} className="space-y-8 relative isolate">
         {/* Company Select */}
-        <div className="group">
+        <div className="group relative z-0">
           <label htmlFor="company" className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-3">
             <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-lg">
               🏢
@@ -458,25 +509,25 @@ export function ThanksForm() {
           
           <div className="space-y-4">
             {formData.mediaUrl ? (
-              <div className="relative overflow-hidden rounded-2xl border-2 border-blue-200 shadow-xl">
+              <div className="relative overflow-hidden rounded-2xl border-2 border-blue-200 shadow-xl pointer-events-auto">
                 <div className="relative aspect-video w-full bg-gradient-to-br from-blue-50 to-cyan-50">
                   {/* Use unoptimized to avoid Next.js trying to fetch from R2 endpoint */}
                   <Image 
                     src={formData.mediaUrl} 
                     alt="Yüklenen medya" 
                     fill 
-                    className="object-contain p-4"
+                    className="object-contain p-4 pointer-events-none"
                     unoptimized
                   />
                 </div>
                 <button
                   type="button"
                   onClick={handleRemoveMedia}
-                  className="absolute right-3 top-3 rounded-full bg-red-500 p-2.5 text-white shadow-2xl hover:bg-red-600 transition-all hover:scale-110"
+                  className="absolute right-3 top-3 rounded-full bg-red-500 p-2.5 text-white shadow-2xl hover:bg-red-600 transition-all hover:scale-110 z-10 pointer-events-auto"
                 >
                   <XMarkIcon className="h-5 w-5" aria-hidden="true" />
                 </button>
-                <div className="absolute bottom-3 left-3 px-4 py-2 bg-white/90 backdrop-blur-sm rounded-full text-sm font-semibold text-gray-700 shadow-lg">
+                <div className="absolute bottom-3 left-3 px-4 py-2 bg-white/90 backdrop-blur-sm rounded-full text-sm font-semibold text-gray-700 shadow-lg pointer-events-none">
                   ✓ Yüklendi
                 </div>
               </div>
@@ -531,44 +582,30 @@ export function ThanksForm() {
                     </div>
                   )}
                 </div>
-
-                {/* Divider */}
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-200"></div>
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-4 bg-white text-gray-500 font-medium">veya URL ile ekle</span>
-                  </div>
-                </div>
-
-                {/* URL Input */}
-                <input
-                  type="url"
-                  placeholder="https://example.com/image.jpg"
-                  value={formData.mediaUrl || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, mediaUrl: e.target.value }))}
-                  disabled={isUploading}
-                  className="block w-full rounded-2xl border-2 border-blue-200 px-5 py-4 text-base shadow-lg focus:border-blue-400 focus:ring-4 focus:ring-blue-100 transition-all outline-none hover:border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                />
               </>
             )}
           </div>
         </div>
 
         {/* Submit Button */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-4 pt-6 border-t-2 border-gray-100">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-4 pt-6 border-t-2 border-gray-100 relative z-50">
           <button
             type="button"
             onClick={() => router.back()}
-            className="rounded-2xl border-2 border-gray-300 px-8 py-4 text-base font-bold text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all hover:shadow-lg"
+            className="rounded-2xl border-2 border-gray-300 px-8 py-4 text-base font-bold text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all hover:shadow-lg relative z-50 cursor-pointer"
           >
             ← Geri Dön
           </button>
           <button
             type="submit"
             disabled={isSubmitting || isUploading}
-            className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 px-10 py-4 text-base font-bold text-white shadow-2xl transition-all hover:shadow-pink-500/50 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 group"
+            onClick={() => {
+              console.log('🖱️ BUTTON CLICKED!');
+              console.log('Button disabled?', isSubmitting || isUploading);
+              console.log('isSubmitting:', isSubmitting);
+              console.log('isUploading:', isUploading);
+            }}
+            className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 px-10 py-4 text-base font-bold text-white shadow-2xl transition-all hover:shadow-pink-500/50 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 group z-50 cursor-pointer"
           >
             <span className="relative z-10 flex items-center justify-center gap-2">
               {isSubmitting ? (

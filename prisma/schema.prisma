@@ -80,17 +80,20 @@ model VerificationToken {
 
 // Company model
 model Company {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  slug      String   @unique
-  logoUrl   String?
-  category  String
-  createdAt DateTime @default(now())
+  id              String   @id @default(cuid())
+  name            String   @unique
+  slug            String   @unique
+  logoUrl         String?
+  category        String
+  isApproved      Boolean  @default(true) // false = pending approval
+  applicationData Json?    // stores: contactName, phone, email, appliedAt
+  createdAt       DateTime @default(now())
 
   thanks    Thanks[]
   followers FollowCompany[]
 
   @@index([name, category])
+  @@index([isApproved])
   @@map("companies")
 }
 
@@ -132,15 +135,17 @@ model Like {
 
 // Comment model
 model Comment {
-  id        String   @id @default(cuid())
-  userId    String
-  thanksId  String
-  text      String   // max 500 chars (validated in app)
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  userId     String
+  thanksId   String
+  text       String   // max 500 chars (validated in app)
+  isApproved Boolean  @default(false) // false = pending approval, true = approved
+  createdAt  DateTime @default(now())
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   thanks Thanks @relation(fields: [thanksId], references: [id], onDelete: Cascade)
 
+  @@index([isApproved])
   @@map("comments")
 }
 

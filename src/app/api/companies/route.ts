@@ -26,13 +26,14 @@ export async function GET(req: Request) {
     // Build where clause
     const where = q
       ? {
+          isApproved: true, // Only show approved companies
           OR: [
             { name: { contains: q, mode: 'insensitive' as const } },
             { slug: { contains: q, mode: 'insensitive' as const } },
             { category: { contains: q, mode: 'insensitive' as const } },
           ],
         }
-      : {};
+      : { isApproved: true }; // Only show approved companies
 
     const [companies, total] = await Promise.all([
       prisma.company.findMany({

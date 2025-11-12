@@ -140,8 +140,8 @@ export async function GET(req: Request) {
 const createThanksSchema = z.object({
   companyId: z.string().cuid('Geçersiz şirket ID'),
   text: thanksTextSchema,
-  mediaUrl: z.string().url('Geçerli bir URL giriniz').nullable().optional().or(z.literal('')),
-  mediaType: z.enum(['image', 'video']).optional(),
+  mediaUrl: z.union([z.string().url(), z.literal(''), z.null()]).optional(),
+  mediaType: z.enum(['image', 'video']).optional().nullable(),
 });
 
 export async function POST(req: Request) {
@@ -185,10 +185,10 @@ export async function POST(req: Request) {
     // Normalize empty string to null
     const mediaUrl = data.mediaUrl && data.mediaUrl.trim() !== '' ? data.mediaUrl : null;
 
-    // Validate mediaUrl and mediaType together
-    if ((mediaUrl && !data.mediaType) || (!mediaUrl && data.mediaType)) {
+    // Validate mediaUrl and mediaType together - only require mediaType if mediaUrl is provided
+    if (mediaUrl && !data.mediaType) {
       return NextResponse.json(
-        { error: 'mediaUrl ve mediaType birlikte sağlanmalıdır' },
+        { error: 'Medya URL\'si varken medya tipi belirtilmelidir' },
         { status: 400 }
       );
     }
