@@ -9,6 +9,7 @@ interface Company {
   id: string;
   name: string;
   logo?: string;
+  logoUrl?: string;
 }
 
 interface User {
@@ -178,10 +179,10 @@ export default function TrendingThanks({ thanks }: TrendingThanksProps) {
                       </div>
                       {thanks.company && (
                         <div className="flex items-center gap-1.5 px-2 py-1 bg-purple-50 rounded-full flex-shrink-0">
-                          {thanks.company.logo && (
+                          {thanks.company.logoUrl && (
                             <div className="relative w-3 h-3">
                               <Image
-                                src={thanks.company.logo}
+                                src={thanks.company.logoUrl}
                                 alt={thanks.company.name}
                                 fill
                                 className="object-contain"

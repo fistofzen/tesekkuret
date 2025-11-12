@@ -65,7 +65,7 @@ export default async function ThanksDetailPage({ params }: PageProps) {
           <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-purple-50/50 to-pink-50/50">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <Link href={`/profil/${thanks.user.id}`} className="relative w-14 h-14 rounded-full overflow-hidden ring-4 ring-purple-100 hover:ring-purple-200 transition-all">
+                <Link href={`/kullanici/${thanks.user.id}`} className="relative w-14 h-14 rounded-full overflow-hidden ring-4 ring-purple-100 hover:ring-purple-200 transition-all">
                   <Image
                     src={thanks.user.image || 'https://i.pravatar.cc/150?img=1'}
                     alt={thanks.user.name || 'Kullanıcı'}
@@ -75,7 +75,7 @@ export default async function ThanksDetailPage({ params }: PageProps) {
                   />
                 </Link>
                 <div>
-                  <Link href={`/profil/${thanks.user.id}`} className="text-lg font-bold text-gray-900 hover:text-purple-600 transition-colors">
+                  <Link href={`/kullanici/${thanks.user.id}`} className="text-lg font-bold text-gray-900 hover:text-purple-600 transition-colors">
                     {thanks.user.name || 'Anonim Kullanıcı'}
                   </Link>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -96,10 +96,10 @@ export default async function ThanksDetailPage({ params }: PageProps) {
                   href={`/sirket/${thanks.company.slug}`}
                   className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-pink-100 to-purple-100 rounded-full hover:from-pink-200 hover:to-purple-200 transition-all border-2 border-pink-200"
                 >
-                  {thanks.company.logo && (
+                  {thanks.company.logoUrl && (
                     <div className="relative w-6 h-6">
                       <Image
-                        src={thanks.company.logo}
+                        src={thanks.company.logoUrl}
                         alt={thanks.company.name}
                         fill
                         className="object-contain"
@@ -119,24 +119,24 @@ export default async function ThanksDetailPage({ params }: PageProps) {
           {/* Thanks Content */}
           <div className="p-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-6 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 bg-clip-text text-transparent">
-              {thanks.title}
+              {thanks.text}
             </h1>
 
             {/* Media Content */}
             {thanks.mediaUrl && (
               <div className="mb-6 rounded-xl overflow-hidden ring-4 ring-purple-100">
-                {thanks.mediaType === 'IMAGE' ? (
+                {thanks.mediaType === 'image' ? (
                   <div className="relative w-full aspect-video">
                     <Image
                       src={thanks.mediaUrl}
-                      alt={thanks.title}
+                      alt={thanks.text}
                       fill
                       className="object-cover"
                       sizes="(max-width: 896px) 100vw, 896px"
                       priority
                     />
                   </div>
-                ) : thanks.mediaType === 'VIDEO' ? (
+                ) : thanks.mediaType === 'video' ? (
                   <video
                     src={thanks.mediaUrl}
                     controls

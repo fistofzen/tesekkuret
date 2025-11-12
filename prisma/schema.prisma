@@ -24,16 +24,28 @@ model User {
   accounts        Account[]
   sessions        Session[]
   thanks          Thanks[]
+  thanksReceived  Thanks[]  @relation("UserThanks") // Thanks received from others
   likes           Like[]
   comments        Comment[]
   followCompanies FollowCompany[]
   reports         Report[]
+  
+  // User follow system (friendship)
+  following       UserFollow[] @relation("UserFollowing")
+  followers       UserFollow[] @relation("UserFollowers")
  
   bio      String?
   phone    String?
   location String?
   website  String?
+  
+  // User type: 'user' (regular), 'professional' (kurye, etc.)
+  userType String   @default("user")
+  // Professional info (for kurye, freelancer, etc.)
+  profession String?
+  workArea   String? // work location/area
  
+  @@index([userType])
   @@map("users")
 }
 
@@ -99,23 +111,27 @@ model Company {
 
 // Thanks model
 model Thanks {
-  id         String   @id @default(cuid())
-  userId     String
-  companyId  String
-  text       String   // min 10, max 1000 chars (validated in app)
-  mediaUrl   String?
-  mediaType  MediaType?
-  likeCount  Int      @default(0)
-  createdAt  DateTime @default(now())
+  id              String     @id @default(cuid())
+  userId          String
+  companyId       String?    // Optional: can thank a company OR a user
+  targetUserId    String?    // Optional: user being thanked (kurye, freelancer, etc.)
+  text            String     // min 10, max 1000 chars (validated in app)
+  mediaUrl        String?
+  mediaType       MediaType?
+  likeCount       Int        @default(0)
+  createdAt       DateTime   @default(now())
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  likes    Like[]
-  comments Comment[]
-  reports  Report[]
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company     Company?   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  targetUser  User?      @relation("UserThanks", fields: [targetUserId], references: [id], onDelete: Cascade)
+  likes       Like[]
+  comments    Comment[]
+  reports     Report[]
 
   @@index([companyId, createdAt(sort: Desc)])
+  @@index([targetUserId, createdAt(sort: Desc)])
   @@index([companyId])
+  @@index([targetUserId])
   @@map("thanks")
 }
 
@@ -161,6 +177,22 @@ model FollowCompany {
 
   @@unique([userId, companyId])
   @@map("follow_companies")
+}
+
+// UserFollow model (friendship/following system)
+model UserFollow {
+  id          String   @id @default(cuid())
+  followerId  String   // User who follows
+  followingId String   // User being followed
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("user_follows")
 }
 
 // Report model

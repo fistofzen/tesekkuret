@@ -79,7 +79,11 @@ async function getPendingReports() {
     },
   });
 
-  return reports;
+  // Convert Date to string for serialization
+  return reports.map(report => ({
+    ...report,
+    createdAt: report.createdAt.toISOString(),
+  }));
 }
 
 export default async function AdminPage() {

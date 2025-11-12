@@ -23,7 +23,7 @@ interface PopularThanks {
     slug: string;
     name: string;
     logoUrl: string | null;
-  };
+  } | null;
   _count: {
     likes: number;
     comments: number;
@@ -116,37 +116,39 @@ export function PopularThanks({ items }: PopularThanksProps) {
                     </div>
 
                     {/* Company */}
-                    <div className="flex-1">
-                      <Link
-                        href={`/sirketler/${current.company.slug}`}
-                        className="group flex items-center gap-2"
-                      >
-                        <div className="relative h-8 w-8 overflow-hidden rounded bg-gray-100">
-                          {current.company.logoUrl ? (
-                            <Image
-                              src={current.company.logoUrl}
-                              alt={current.company.name}
-                              fill
-                              className="object-contain p-1"
-                            />
-                          ) : (
-                            <div className="flex h-full items-center justify-center text-xs font-bold text-gray-400">
-                              {current.company.name.charAt(0)}
-                            </div>
-                          )}
-                        </div>
-                        <span className="font-semibold text-gray-900 group-hover:text-pink-600">
-                          {current.company.name}
-                        </span>
-                      </Link>
-                      <p className="text-sm text-gray-500">
-                        {current.user.name || 'Anonim'} •{' '}
-                        {formatDistanceToNow(new Date(current.createdAt), {
-                          addSuffix: true,
-                          locale: tr,
-                        })}
-                      </p>
-                    </div>
+                    {current.company && (
+                      <div className="flex-1">
+                        <Link
+                          href={`/sirketler/${current.company.slug}`}
+                          className="group flex items-center gap-2"
+                        >
+                          <div className="relative h-8 w-8 overflow-hidden rounded bg-gray-100">
+                            {current.company.logoUrl ? (
+                              <Image
+                                src={current.company.logoUrl}
+                                alt={current.company.name}
+                                fill
+                                className="object-contain p-1"
+                              />
+                            ) : (
+                              <div className="flex h-full items-center justify-center text-xs font-bold text-gray-400">
+                                {current.company.name.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                          <span className="font-semibold text-gray-900 group-hover:text-pink-600">
+                            {current.company.name}
+                          </span>
+                        </Link>
+                        <p className="text-sm text-gray-500">
+                          {current.user.name || 'Anonim'} •{' '}
+                          {formatDistanceToNow(new Date(current.createdAt), {
+                            addSuffix: true,
+                            locale: tr,
+                          })}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Text */}

@@ -40,81 +40,24 @@ async function getTrendingThanks() {
       },
     });
 
-    // Mock data if empty (for demo purposes)
-    if (thanks.length === 0) {
-      return [
-        {
-          id: '1',
-          title: 'Fuzul Evde Temizlik Hatası Ve Ödeme Artışı Mağduriyeti',
-          content: 'Fuzul Evde Temizlik Hatası Ve Ödeme Artışı Mağduriyeti',
-          thumbnail: '/banner1.jpeg',
-          createdAt: new Date(),
-          likes: 25,
-          commentCount: 379,
-          user: { id: '1', name: 'Asiye', image: 'https://i.pravatar.cc/150?img=1' },
-          company: { id: 'fuzul-ev', name: 'Fuzul Ev', logo: null },
-        },
-        {
-          id: '2',
-          title: 'Eminevim Kura Çekimlerinde Haksızlık Ve Mağduriyet',
-          content: 'Eminevim Kura Çekimlerinde Haksızlık Ve Mağduriyet',
-          thumbnail: null,
-          createdAt: new Date(),
-          likes: 41,
-          commentCount: 852,
-          user: { id: '2', name: 'Niyazi', image: 'https://i.pravatar.cc/150?img=2' },
-          company: { id: 'eminotomotiv', name: 'EminOtomotiv', logo: null },
-        },
-        {
-          id: '3',
-          title: 'Papara Hesabımdaki Bakiyemi Çekemiyorum, Sürekli Günlük Limit Hatası Alıyorum',
-          content: 'Papara Hesabımdaki Bakiyemi Çekemiyorum, Sürekli Günlük Limit Hatası Alıyorum',
-          thumbnail: null,
-          createdAt: new Date(),
-          likes: 2,
-          commentCount: 266,
-          user: { id: '3', name: 'Vafa', image: 'https://i.pravatar.cc/150?img=3' },
-          company: { id: 'papara', name: 'Papara', logo: null },
-        },
-        {
-          id: '4',
-          title: 'Sıfır Kilometre Araçta Yaygın Paslanma Ve Boya Kabarması Sorunu',
-          content: 'Sıfır Kilometre Araçta Yaygın Paslanma Ve Boya Kabarması Sorunu',
-          thumbnail: '/banner1.jpeg',
-          createdAt: new Date(),
-          likes: 11,
-          commentCount: 283,
-          user: { id: '4', name: 'Muhammed', image: 'https://i.pravatar.cc/150?img=4' },
-          company: { id: 'chery', name: 'Chery', logo: null },
-        },
-        {
-          id: '5',
-          title: 'Yetkili Serviste Yapılan Bakım Hatası Sonrası Aracım Garanti Dışı Bırakıldı',
-          content: 'Yetkili Serviste Yapılan Bakım Hatası Sonrası Aracım Garanti Dışı Bırakıldı',
-          thumbnail: '/banner1.jpeg',
-          createdAt: new Date(),
-          likes: 2,
-          commentCount: 228,
-          user: { id: '5', name: 'Muhammed', image: 'https://i.pravatar.cc/150?img=5' },
-          company: { id: 'akgun-otomotiv', name: 'Akgün Otomotiv (Sakarya)', logo: null },
-        },
-      ];
-    }
-
     // Map database data to component format
     return thanks.map((t: typeof thanks[0]) => ({
       id: t.id,
       title: t.text,
       content: t.text,
-      thumbnail: t.mediaUrl,
+      thumbnail: t.mediaUrl || undefined,
       createdAt: t.createdAt,
       likes: t._count.likes,
       commentCount: t._count.comments,
-      user: t.user,
+      user: {
+        ...t.user,
+        name: t.user.name || undefined,
+        image: t.user.image || undefined,
+      },
       company: t.company ? {
         id: t.company.slug,
         name: t.company.name,
-        logo: t.company.logoUrl,
+        logo: t.company.logoUrl || undefined,
       } : undefined,
     }));
   } catch (error) {
@@ -130,29 +73,29 @@ async function getTrendingThanks() {
         likes: 25,
         commentCount: 379,
         user: { id: '1', name: 'Asiye', image: 'https://i.pravatar.cc/150?img=1' },
-        company: { id: 'fuzul-ev', name: 'Fuzul Ev', logo: null },
+        company: { id: 'fuzul-ev', name: 'Fuzul Ev', logo: undefined },
       },
       {
         id: '2',
         title: 'Eminevim Kura Çekimlerinde Haksızlık Ve Mağduriyet',
         content: 'Eminevim Kura Çekimlerinde Haksızlık Ve Mağduriyet',
-        thumbnail: null,
+        thumbnail: undefined,
         createdAt: new Date(),
         likes: 41,
         commentCount: 852,
         user: { id: '2', name: 'Niyazi', image: 'https://i.pravatar.cc/150?img=2' },
-        company: { id: 'eminotomotiv', name: 'EminOtomotiv', logo: null },
+        company: { id: 'eminotomotiv', name: 'EminOtomotiv', logo: undefined },
       },
       {
         id: '3',
         title: 'Papara Hesabımdaki Bakiyemi Çekemiyorum',
         content: 'Papara Hesabımdaki Bakiyemi Çekemiyorum',
-        thumbnail: null,
+        thumbnail: undefined,
         createdAt: new Date(),
         likes: 2,
         commentCount: 266,
         user: { id: '3', name: 'Vafa', image: 'https://i.pravatar.cc/150?img=3' },
-        company: { id: 'papara', name: 'Papara', logo: null },
+        company: { id: 'papara', name: 'Papara', logo: undefined },
       },
     ];
   }

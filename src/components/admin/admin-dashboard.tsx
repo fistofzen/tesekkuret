@@ -38,7 +38,7 @@ interface Report {
     };
     company: {
       name: string;
-    };
+    } | null;
   };
 }
 
@@ -152,8 +152,8 @@ export function AdminDashboard({ stats, reports }: AdminDashboardProps) {
                     <p className="mb-1 text-xs font-medium text-gray-600">Şikayet Edilen İçerik:</p>
                     <p className="text-sm text-gray-800 line-clamp-2">{report.thanks.text}</p>
                     <p className="mt-1 text-xs text-gray-500">
-                      Yazan: {report.thanks.user.name || report.thanks.user.email} - Şirket:{' '}
-                      {report.thanks.company.name}
+                      Yazan: {report.thanks.user.name || report.thanks.user.email}
+                      {report.thanks.company && ` - Şirket: ${report.thanks.company.name}`}
                     </p>
                   </div>
 

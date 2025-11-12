@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { Suspense } from 'react';
 import { ThanksForm } from '@/components/thanks/thanks-form';
 
 export const metadata: Metadata = {
@@ -33,7 +34,9 @@ export default function ThanksWritePage() {
 
         {/* Form Card */}
         <div className="rounded-3xl bg-white/90 backdrop-blur-sm p-8 sm:p-10 shadow-2xl border-2 border-purple-100">
-          <ThanksForm />
+          <Suspense fallback={<div>Yükleniyor...</div>}>
+            <ThanksForm />
+          </Suspense>
         </div>
         
         {/* Tips Section */}
